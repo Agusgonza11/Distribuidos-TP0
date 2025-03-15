@@ -188,14 +188,13 @@ Para resolver este ejercicio, se utilizó el mismo script de Bash (`generar-comp
 
 En `mi-generador.py`, se emplea la librería `yaml` para generar dinámicamente un archivo `docker-compose-dev.yaml`. Para lograr esto, se creo un diccionario en Python que replica la estructura original del `docker-compose.yaml`, modificando solo la cantidad de clientes de acuerdo con el parametro recibido. Esto garantiza una generación de YAML estructurada y sin errores de indentación.
 
-# Explicación de Resolución
-
-## Ejercicio 1
-Para resolver este ejercicio, se utilizó el mismo script de Bash (`generar-compose.sh`) sugerido en la consigna, el cual invoca un script en Python (`mi-generador.py`).
-
-En `mi-generador.py`, se emplea la librería `yaml` para generar dinámicamente un archivo `docker-compose.yaml`. En lugar de concatenar strings manualmente, se creó un diccionario en Python que replica la estructura original del `docker-compose.yaml`, modificando solo la cantidad de clientes de acuerdo con el parámetro recibido. Esto garantiza una generación de YAML estructurada y sin errores de indentación.
-
 ### Ejecución
 El script se ejecuta con el siguiente comando:
 ```bash
 ./generar-compose.sh <nombre archivo salida> <cantidad clientes>
+```
+
+## Ejercicio 2
+Se agregó una sección de volúmenes en `mi-generador.py` para inyectar los archivos de configuración en los contenedores del servidor y los clientes. Esto permite modificar la configuración sin necesidad de reconstruir las imagenes de Docker.
+
+Los volumenes montan `config.ini` en el servidor y `config.yaml` en los clientes.
