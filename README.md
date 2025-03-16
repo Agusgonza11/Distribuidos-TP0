@@ -198,3 +198,19 @@ El script se ejecuta con el siguiente comando:
 Se agregó una sección de volúmenes en `mi-generador.py` para inyectar los archivos de configuración en los contenedores del servidor y los clientes. Esto permite modificar la configuración sin necesidad de reconstruir las imagenes de Docker.
 
 Los volumenes montan `config.ini` en el servidor y `config.yaml` en los clientes.
+
+### Ejercicio 3
+Se creó un script de Bash (`validar-echo-server.sh`) que utiliza `netcat` para verificar el correcto funcionamiento del servidor echo. Utilizando el network name `tp0_testing_net`. Se envía un mensaje al servidor y se compara la respuesta con el mensaje original.
+
+### Ejecución
+```sh
+./validar-echo-server.sh
+```
+
+Si la respuesta coincide con el mensaje enviado, imprime:
+```sh
+action: test_echo_server | result: success
+```
+De lo contrario:
+```sh
+action: test_echo_server | result: fail
