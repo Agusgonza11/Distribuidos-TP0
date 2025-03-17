@@ -214,3 +214,27 @@ action: test_echo_server | result: success
 De lo contrario:
 ```sh
 action: test_echo_server | result: fail
+```
+
+### Ejercicio 4
+Se modifico tanto el server en su funcion `run`, como al cliente en su funcion `StartClientLoop` para que capturen la señal `SIGTERM`.  
+El cliente simplemente captura la señal y cierra su socket.  
+El server ademas cierra todas sus conexiones al recibir la señal, esto se logra ya que se agrego una lista con todos los sockets cada vez que se genera una conexion con un nuevo cliente.
+
+### Ejecución
+Primero ejecutar `make docker-compose-up` en una terminal, luego en otra terminal `make docker-compose-logs`, finalmente utilizar la primera para cerrar los contenedores con `make docker-compose-down`.  
+Lo que se vera seran los logs indicando los cierres exitosos tanto de los clientes como del server.  
+Del lado del cliente:  
+```sh
+"Client <id>: Received SIGTERM. Closing connection"
+client<id> exited with code 0
+```
+Del lado del server:  
+```sh
+"Server: Recibida señal SIGTERM. Cerrando conexiones"
+server exited with code 0
+```
+Para cada uno de sus clientes:
+```sh
+action: closing_socket | result: success
+```
