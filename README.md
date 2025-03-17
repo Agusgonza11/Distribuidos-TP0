@@ -199,7 +199,7 @@ Se agregó una sección de volúmenes en `mi-generador.py` para inyectar los arc
 
 Los volumenes montan `config.ini` en el servidor y `config.yaml` en los clientes.
 
-### Ejercicio 3
+## Ejercicio 3
 Se creó un script de Bash (`validar-echo-server.sh`) que utiliza `netcat` para verificar el correcto funcionamiento del servidor echo. Utilizando el network name `tp0_testing_net`. Se envía un mensaje al servidor y se compara la respuesta con el mensaje original.
 
 ### Ejecución
