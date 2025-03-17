@@ -13,6 +13,12 @@ class Server:
         self.clients_sockets = []
 
     def __handle_sigterm_signal(self, signal, frame):
+        """
+        Handles SIGTERM signal for graceful shutdown.
+
+        Closes all active client connections, shuts down the server socket, 
+        and exits the process cleanly.
+        """
         logging.info("Server: Recibida señal SIGTERM. Cerrando conexiones")
         for client in self.clients_sockets:
             client.close()
