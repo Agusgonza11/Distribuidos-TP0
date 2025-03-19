@@ -1,7 +1,10 @@
 package common
 
 import (
+	"bufio"
 	"fmt"
+	"io"	
+	"encoding/binary"
 	"net"
 	"time"
 	"os"
@@ -82,12 +85,11 @@ func (c *Client) StartClientLoop() {
 		c.createClientSocket()
 		c.ManageBet()
 		time.Sleep(c.config.LoopPeriod)
-
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
-
+// ManageBet serializa la apuesta del cliente y la envía al servidor.
 func (c *Client) ManageBet() {
 	// Serialize the bet
 	betData := fmt.Sprintf("%s,%s,%s,%s,%s",
@@ -97,31 +99,20 @@ func (c *Client) ManageBet() {
 	c.clientBet.Birthdate,
 	c.clientBet.Number,
 	)
-		
-	err := SendData(c.conn, betData)
+	binary.Write(c.conn, binary.BigEndian, uint32(len(betData)))
+	io.WriteString(c.conn, betData)
+	response, err := bufio.NewReader(c.conn).ReadString('\n')
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
 			c.config.ID, err)
 		return
 	}
-
-	// Recibir la respuesta del servidor
-	response, err := ReceiveData(c.conn)
-	c.conn.Close()		
-
-	if err != nil {
-		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v",
-			c.clientBet.DNI, c.clientBet.Number)
-		return
-	}
-
 	var result string
-	if response == 1 {
+	if response == "1" {
 		result = "success"
-	} else if response == 0 {
+	} else if response == "0" {
 		result = "fail"
 	} 
-		
 	log.Infof("action: apuesta_enviada | result: %v | dni: %v | numero: %v",
 		result, c.clientBet.DNI, c.clientBet.Number)
 }

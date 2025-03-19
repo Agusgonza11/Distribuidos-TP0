@@ -55,7 +55,7 @@ class Server:
             addr = client_sock.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
+            client_sock.send("1\n".format(msg).encode('utf-8'))
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
         finally:
