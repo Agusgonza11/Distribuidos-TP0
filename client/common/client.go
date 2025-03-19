@@ -21,17 +21,27 @@ type ClientConfig struct {
 	LoopPeriod    time.Duration
 }
 
+type ClientBet struct {
+	Name      string
+	Lastname  string
+	DNI       string
+	Birthdate string
+	Number    string
+}
+
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config 		ClientConfig
+	conn   		net.Conn
+	clientBet 	ClientBet
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig) *Client {
+func NewClient(config ClientConfig, bet ClientBet) *Client {
 	client := &Client{
-		config: config,
+		config: 	config,
+		clientBet: 	bet,
 	}
 	return client
 }
