@@ -255,7 +255,7 @@ clientes:
     NACIMIENTO: "2000-05-22"
     NUMERO: "1234"
 ```
-Se modificó el script `generar-compose.sh` para que estos datos sean utilizados y pasados como variables de entorno a los contenedores de los clientes.
+Se modificó el script `my-generador.py` para que estos datos sean utilizados y pasados como variables de entorno a los contenedores de los clientes.
 
 #### Cliente
 - Se implementó la función `ManageBet`, encargada de serializar la apuesta del cliente y enviarla al servidor.
