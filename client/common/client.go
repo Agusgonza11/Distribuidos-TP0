@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"time"
@@ -81,33 +80,48 @@ func (c *Client) StartClientLoop() {
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
-
-		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
-
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			return
-		}
-
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
+		c.ManageBet()
 		time.Sleep(c.config.LoopPeriod)
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+}
+
+
+func (c *Client) ManageBet() {
+	// Serialize the bet
+	betData := fmt.Sprintf("%s,%s,%s,%s,%s",
+	c.clientBet.Name,
+	c.clientBet.Lastname,
+	c.clientBet.DNI,
+	c.clientBet.Birthdate,
+	c.clientBet.Number,
+	)
+		
+	err := SendData(c.conn, betData)
+	if err != nil {
+		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
+			c.config.ID, err)
+		return
+	}
+
+	// Recibir la respuesta del servidor
+	response, err := ReceiveData(c.conn)
+	c.conn.Close()		
+
+	if err != nil {
+		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v",
+			c.clientBet.DNI, c.clientBet.Number)
+		return
+	}
+
+	var result string
+	if response == 1 {
+		result = "success"
+	} else if response == 0 {
+		result = "fail"
+	} 
+		
+	log.Infof("action: apuesta_enviada | result: %v | dni: %v | numero: %v",
+		result, c.clientBet.DNI, c.clientBet.Number)
 }
