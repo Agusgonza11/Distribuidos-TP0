@@ -1,9 +1,9 @@
 import sys 
 import yaml
 
-def cargar_clientes_desde_archivo(archivo_clientes):
+def cargar_clientes_desde_archivo():
     """Cargo clientes desde archivo YAML"""
-    with open(archivo_clientes, "r") as file:
+    with open("clientes.yaml", "r") as file:
         data = yaml.safe_load(file)
     return data.get("clientes", [])
 
@@ -61,14 +61,14 @@ def generar_yaml(cantidad_clientes, clientes):
    
 
 
-def generar_docker_compose(nombre_archivo, cantidad_clientes, archivo_clientes):
-    clientes = cargar_clientes_desde_archivo(archivo_clientes)
+def generar_docker_compose(nombre_archivo, cantidad_clientes):
+    clientes = cargar_clientes_desde_archivo()
     with open(nombre_archivo, "w") as archivo:
         yaml.dump(generar_yaml(cantidad_clientes, clientes), archivo)
 
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         sys.exit(1)
-    generar_docker_compose(sys.argv[1], sys.argv[2], sys.argv[3])
+    generar_docker_compose(sys.argv[1], sys.argv[2])
