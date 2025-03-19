@@ -13,6 +13,11 @@ services:
     entrypoint: /client
     environment:
     - CLI_ID=1
+    - NOMBRE=Santiago
+    - APELLIDO=Lorca
+    - DOCUMENTO=30904465
+    - NACIMIENTO=1999-03-17
+    - NUMERO=7574
     image: client:latest
     networks:
     - testing_net
@@ -25,6 +30,11 @@ services:
     entrypoint: /client
     environment:
     - CLI_ID=2
+    - NOMBRE=Maria
+    - APELLIDO=Gomez
+    - DOCUMENTO=40123456
+    - NACIMIENTO=2000-05-22
+    - NUMERO=1234
     image: client:latest
     networks:
     - testing_net
