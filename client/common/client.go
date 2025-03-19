@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"fmt"
 	"io"	
 	"encoding/binary"
@@ -92,7 +91,8 @@ func (c *Client) StartClientLoop() {
 // ManageBet serializa la apuesta del cliente y la envía al servidor.
 func (c *Client) ManageBet() {
 	// Serialize the bet
-	betData := fmt.Sprintf("%s,%s,%s,%s,%s",
+	betData := fmt.Sprintf("%s|%s|%s|%s|%s|%s",
+	c.config.ID,
 	c.clientBet.Name,
 	c.clientBet.Lastname,
 	c.clientBet.DNI,
@@ -101,16 +101,17 @@ func (c *Client) ManageBet() {
 	)
 	binary.Write(c.conn, binary.BigEndian, uint32(len(betData)))
 	io.WriteString(c.conn, betData)
-	response, err := bufio.NewReader(c.conn).ReadString('\n')
+	buf := make([]byte, 1) // Buffer para un solo byte
+	_, err := c.conn.Read(buf)	
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
 			c.config.ID, err)
 		return
 	}
 	var result string
-	if response == "1" {
+	if buf[0] == 1 {
 		result = "success"
-	} else if response == "0" {
+	} else if buf[0] == 0 {
 		result = "fail"
 	} 
 	log.Infof("action: apuesta_enviada | result: %v | dni: %v | numero: %v",

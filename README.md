@@ -238,3 +238,65 @@ Para cada uno de sus clientes:
 ```sh
 action: closing_socket | result: success
 ```
+
+## Ejercicio 5
+Se creó un archivo `clientes.yaml` que contiene una lista con los datos de los clientes en el siguiente formato:
+
+```yaml
+clientes:
+  - NOMBRE: "Santiago"
+    APELLIDO: "Lorca"
+    DOCUMENTO: "30904465"
+    NACIMIENTO: "1999-03-17"
+    NUMERO: "7574"
+  - NOMBRE: "Maria"
+    APELLIDO: "Gomez"
+    DOCUMENTO: "40123456"
+    NACIMIENTO: "2000-05-22"
+    NUMERO: "1234"
+```
+Se modificó el script `generar-compose.sh` para que estos datos sean utilizados y pasados como variables de entorno a los contenedores de los clientes.
+
+#### Cliente
+- Se implementó la función `ManageBet`, encargada de serializar la apuesta del cliente y enviarla al servidor.
+- Se modificó `StartClientLoop` para abrir una nueva conexión en cada iteración y enviar la apuesta correspondiente.
+
+#### Servidor
+- Se modificó `__handle_client_connection` para recibir y procesar las apuestas de los clientes.
+
+## Protocolo de Comunicación
+1. **El cliente envía un `uint32`** con el tamaño del mensaje.
+2. **El cliente envía el mensaje**, que es un string con el siguiente formato:
+   ```
+   nombre|apellido|dni|nacimiento|numero
+   ```
+3. **El servidor recibe el `uint32`**, lo interpreta como el tamaño del mensaje.
+4. **El servidor recibe el mensaje**, lo parsea y lo almacena utilizando `store_bets`.
+5. **El servidor registra la apuesta en los logs** y envía al cliente un byte:
+   - `1` si la apuesta se procesó con éxito.
+   - `0` si ocurrió un error.
+6. **El cliente recibe el byte de respuesta** e imprime en los logs si la apuesta fue `success` o `fail`.
+
+### Ejecución
+Generar el archivo `docker-compose-dev.yaml` ahora con el agregado del archivo `clientes.yaml`:
+   ```sh
+   ./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+   ```
+Levantar los contenedores:
+   ```sh
+   make docker-compose-up
+   ```
+Observar los logs en otra terminal:
+   ```sh
+   make docker-compose-logs
+   ```
+Se podra observar:
+#### Cliente
+```sh
+action: apuesta_enviada | result: success | dni: ${DNI} | numero: ${NUMERO}
+```
+
+#### Servidor
+```sh
+action: apuesta_almacenada | result: success | dni: ${DNI} | numero: ${NUMERO}
+```
