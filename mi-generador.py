@@ -44,16 +44,12 @@ def generar_yaml(cantidad_clientes, clientes):
             "entrypoint": "/client",
             "environment": [
                 f"CLI_ID={i}",
-                f"NOMBRE={cliente.get('NOMBRE', 'Unknown')}",
-                f"APELLIDO={cliente.get('APELLIDO', 'Unknown')}",
-                f"DOCUMENTO={cliente.get('DOCUMENTO', '00000000')}",
-                f"NACIMIENTO={cliente.get('NACIMIENTO', '1900-01-01')}",
-                f"NUMERO={cliente.get('NUMERO', '0000')}",
             ],
             "networks": ["testing_net"],
             "depends_on": ["server"],
             "volumes": [
-                f"./client/config.yaml:/config.yaml"
+                f"./client/config.yaml:/config.yaml",
+                f"./.data/dataset/agency-{i}.csv:/agency.csv"
             ]
         }
 
