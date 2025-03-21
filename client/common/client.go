@@ -80,10 +80,10 @@ func (c *Client) StartClientLoop(batches []string) {
 	}()
 
 
-		// Create the connection the server in every loop iteration. Send an
-		c.createClientSocket()
-		c.ManageBets(batches)
-		time.Sleep(c.config.LoopPeriod)
+	// Create the connection the server in every loop iteration. Send an
+	c.createClientSocket()
+	c.ManageBets(batches)
+	time.Sleep(c.config.LoopPeriod)
 	
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
@@ -107,10 +107,8 @@ func sendHeader(conn net.Conn, batch int, batchAmount int) {
 }
 
 func (c *Client) ManageBets(batches []string) {
-	for i, batch := range batches {
-		if i > 0 {
-			break
-		}
+	for _, batch := range batches {
+
 		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
 		io.WriteString(c.conn, batch)
 
