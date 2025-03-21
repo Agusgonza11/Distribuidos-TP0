@@ -51,7 +51,7 @@ def generar_yaml(cantidad_clientes, clientes):
             "depends_on": ["server"],
             "volumes": [
                 f"./client/config.yaml:/config.yaml",
-                f"./.data/dataset/agency-{i}.csv:/agency.csv"
+                f"./.data/agency-{i}.csv:/agency.csv"
             ]
         }
 

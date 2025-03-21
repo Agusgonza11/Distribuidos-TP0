@@ -63,6 +63,7 @@ class Server:
                 bets_length = convertByteToNumber(client_sock.recv(4))
                 msg = client_sock.recv(size).decode('utf-8')
                 isSuccess = True
+                total_bets_received = 0
                 bets = []
                 for actual_bet in msg.split(";"):
                     fields = actual_bet.split("|")
@@ -73,14 +74,14 @@ class Server:
                         isSuccess = False
                 if len(bets) != bets_length:
                     isSuccess = False
-
+                total_bets_received += len(bets)
                 if not isSuccess:
                     client_sock.sendall(b'\x02')
                     logging.info(f'action: apuesta_recibida | result: fail | cantidad: {bets_length - len(bets)}')
                 else:
                     client_sock.sendall(b'\x00')
 
-                logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+                logging.info(f'action: apuesta_recibida | result: success | cantidad: {total_bets_received}')
                 store_bets(bets)
 
         except OSError as e:

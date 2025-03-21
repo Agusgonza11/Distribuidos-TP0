@@ -79,14 +79,12 @@ func (c *Client) StartClientLoop(batches []string) {
 		os.Exit(0)
 	}()
 
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+
 		// Create the connection the server in every loop iteration. Send an
 		c.createClientSocket()
 		c.ManageBets(batches)
 		time.Sleep(c.config.LoopPeriod)
-	}
+	
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
