@@ -300,3 +300,58 @@ action: apuesta_enviada | result: success | dni: ${DNI} | numero: ${NUMERO}
 ```sh
 action: apuesta_almacenada | result: success | dni: ${DNI} | numero: ${NUMERO}
 ```
+
+
+## Ejercicio 6
+
+#### Cliente
+
+- Se reemplazó el uso de variables de entorno individuales por un archivo CSV que se monta como volumen en el contenedor. Ejemplo en `docker-compose-dev.yaml`:
+- Se implementó un **parser** que lee el archivo CSV y las divide en **batches** según las restricciones definidas en `config.yaml`:
+  - Cada batch contiene un número limitado de apuestas, evitando que se supere el tamaño máximo permitido.
+  - Dentro de un batch, cada apuesta está representada como una cadena de texto con los campos separados por `|`, y las apuestas dentro del batch están separadas por `;`.
+  - Este enfoque es más eficiente, ya que evita instanciar objetos innecesarios en memoria y simplifica la serialización de los datos antes de enviarlos al servidor.
+
+#### Servidor
+
+- Se introdujo un diccionario `sockets_id` para asignar un **ID único** a cada cliente basado en su dirección de socket. Esto evita que el cliente deba enviar su ID en cada mensaje y permite que el servidor gestione esta información internamente.
+
+### Protocolo de comunicación
+
+1. **El cliente envía un ****`uint32`**** (size)** indicando el tamaño del batch.
+2. **El cliente envía un ****`uint32`**** (bets\_length)** con la cantidad de apuestas en el batch.
+3. **El cliente envía el batch como un string**, con las apuestas separadas por `;` y los campos de cada apuesta separados por `|`.
+4. **El servidor recibe los datos y los procesa**:
+   - Separa las apuestas y las almacena en una lista.
+   - Valida que la cantidad de apuestas recibidas coincida con `bets_length`.
+   - Si hay una diferencia, la reporta en los logs.
+5. **El servidor responde con un byte**:
+   - `0x00` si las apuestas se procesaron correctamente.
+   - `0x01` si ocurrió un error.
+   - `0x02` si solo alguna de las apuestas son incorrectas.
+
+6. **El cliente recibe la respuesta y la registra en los logs.**
+
+#### Finalización de la conexión
+
+- Una vez que el cliente ha enviado todos sus batches, envía un `uint32` con valor `0`.
+- El servidor interpreta este valor como un indicador de finalización y cierra la conexión con el cliente.
+
+### Ejecución
+Generar el archivo `docker-compose-dev.yaml` ahora con el agregado del archivo `clientes.yaml`:
+   ```sh
+   ./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+   ```
+Levantar los contenedores:
+   ```sh
+   make docker-compose-up
+   ```
+Observar los logs en otra terminal:
+   ```sh
+   make docker-compose-logs
+   ```
+Se podra observar:
+
+```sh
+action: apuesta_recibida | result: success | cantidad: ${CANTIDAD_DE_APUESTAS}
+```
