@@ -84,13 +84,14 @@ func (c *Client) StartClientLoop(batches []string) {
 	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 	c.ManageBets(batches)
+	c.requestWinners()
 	time.Sleep(c.config.LoopPeriod)
 	
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
 
-func sendHeader(conn net.Conn, batch int, batchAmount int) {
+func sendHeader(conn net.Conn, batch int, batchAmount int, id string) {
 	// Envía el encabezado con el tamaño del batch y la cantidad máxima de apuestas.
 
 	batchSize := uint32(batch)
@@ -102,6 +103,10 @@ func sendHeader(conn net.Conn, batch int, batchAmount int) {
 	// Escribir los datos en orden
 	binary.Write(&buf, binary.BigEndian, batchSize)  // 4 bytes - tamaño del batch
 	binary.Write(&buf, binary.BigEndian, maxAmount)  // 4 bytes - cantidad máxima de apuestas por batch
+    fixedID := make([]byte, 4)           			 // 4 bytes - id
+    copy(fixedID, id)                    
+
+    buf.Write(fixedID)  
 	// Escribir el buffer en la conexión
 	_, err := conn.Write(buf.Bytes())
 	if err != nil {
@@ -124,6 +129,28 @@ func (c *Client) ShowResult(buf byte) {
 		return
 	}
 	log.Infof("action: apuesta_enviada | result: %v ", result)
+}
+
+func (c *Client) requestWinners() {
+	c.createClientSocket()
+	c.conn.Write([]byte{'W'})
+	log.Infof("el cliente esta enviando W")
+	var buf bytes.Buffer
+    fixedID := make([]byte, 4)           			 // 4 bytes - id
+    copy(fixedID, c.config.ID)                    
+    buf.Write(fixedID)  
+	_, err := c.conn.Write(buf.Bytes())
+	if err != nil {
+		log.Errorf("Error al enviar el header: %v", err)
+	}
+	winners, error_winners := c.receiveWinners()
+	if error_winners != nil {
+		log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v",
+			c.config.ID, error_winners)		
+		return
+	}
+
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
 }
 
 func (c *Client) receiveWinners() ([]string, error)  {
@@ -154,10 +181,12 @@ func (c *Client) receiveWinners() ([]string, error)  {
 
 func (c *Client) ManageBets(batches []string) {
 	// Envía apuestas en lotes al servidor y gestiona las respuestas.
+	c.conn.Write([]byte{'B'})
+	log.Infof("el cliente esta enviando B")
 
 	for _, batch := range batches {
 
-		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
+		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")), c.config.ID)
 		io.WriteString(c.conn, batch)
 
 		buf := make([]byte, response) // Buffer para un solo byte
@@ -175,14 +204,6 @@ func (c *Client) ManageBets(batches []string) {
 		//c.ShowResult(buf[0])
 	}
 	c.conn.Write([]byte{0, 0, 0, 0})
-	winners, error_winners := c.receiveWinners()
-	if error_winners != nil {
-		log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v",
-			c.config.ID, error_winners)		
-		return
-	}
-
-	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
-
+	c.conn.Close()
 }
 

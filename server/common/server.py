@@ -2,9 +2,11 @@ import socket
 import logging
 import sys
 import signal
+import time
 from .utils import Bet, convertByteToNumber, get_winners, has_won, send_message
 from .utils import store_bets
 
+byte =  1
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -46,18 +48,52 @@ class Server:
         while True:
             client_sock = self.__accept_new_connection()
             self.clients_sockets.append(client_sock)
-            self.sockets_id[client_sock.getpeername()] = self.last_client_id
-            self.agency_finish[client_sock.getpeername()] = False
-            self.last_client_id += 1
             self.__handle_client_connection(client_sock)
 
     def __handle_lottery(self, client_sock):
-        self.agency_finish[client_sock.getpeername()] = True
-        while not all(self.agency_finish.values()):
-            pass
+        id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
+        #while not all(self.agency_finish.values()):
+        #    time.sleep(0.1)
         winners = get_winners()
         logging.info(f'action: sorteo | result: success')
-        send_message(client_sock, ';'.join(winners[self.sockets_id[client_sock.getpeername()]]))
+        send_message(client_sock, ';'.join(winners[self.sockets_id[id]]))
+
+
+
+    def __handle_batches(self, client_sock):
+        self.agency_finish[client_sock.getpeername()] = False
+        while True:
+            size = convertByteToNumber(client_sock.recv(4))
+            if size == 0:
+                self.agency_finish[client_sock.getpeername()] = True
+                break
+            bets_length = convertByteToNumber(client_sock.recv(4))
+            id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
+            if id not in self.sockets_id:
+                self.sockets_id[id] = self.last_client_id
+                self.last_client_id += 1
+            msg = client_sock.recv(size).decode('utf-8')
+            isSuccess = True
+            total_bets_received = 0
+            bets = []
+            for actual_bet in msg.split(";"):
+                fields = actual_bet.split("|")
+                if len(fields) == 5: 
+                    bet = Bet(self.sockets_id[id], fields[0], fields[1], fields[2], fields[3], fields[4])
+                    bets.append(bet)
+                else:
+                    isSuccess = False
+            if len(bets) != bets_length:
+                isSuccess = False
+            total_bets_received += len(bets)
+            if not isSuccess:
+                client_sock.sendall(b'\x02')
+                logging.info(f'action: apuesta_recibida | result: fail | cantidad: {bets_length - len(bets)}')
+            else:
+                client_sock.sendall(b'\x00')
+
+            logging.info(f'action: apuesta_recibida | result: success | cantidad: {total_bets_received}')
+            store_bets(bets)       
 
 
     def __handle_client_connection(self, client_sock):
@@ -68,35 +104,14 @@ class Server:
         client socket will also be closed
         """
         try:
-            while True:
-                size = convertByteToNumber(client_sock.recv(4))
-                if size == 0:
-                    self.__handle_lottery(client_sock)
-                    break
-                bets_length = convertByteToNumber(client_sock.recv(4))
-                msg = client_sock.recv(size).decode('utf-8')
-                isSuccess = True
-                total_bets_received = 0
-                bets = []
-                for actual_bet in msg.split(";"):
-                    fields = actual_bet.split("|")
-                    if len(fields) == 5: 
-                        bet = Bet(self.sockets_id[client_sock.getpeername()], fields[0], fields[1], fields[2], fields[3], fields[4])
-                        bets.append(bet)
-                    else:
-                        isSuccess = False
-                if len(bets) != bets_length:
-                    isSuccess = False
-                total_bets_received += len(bets)
-                if not isSuccess:
-                    client_sock.sendall(b'\x02')
-                    logging.info(f'action: apuesta_recibida | result: fail | cantidad: {bets_length - len(bets)}')
-                else:
-                    client_sock.sendall(b'\x00')
+            request = client_sock.recv(byte).decode('utf-8')
+            if request == 'B':
+                logging.info(f'el server recibe B')
 
-                logging.info(f'action: apuesta_recibida | result: success | cantidad: {total_bets_received}')
-                store_bets(bets)
-            sasd = 2 
+                self.__handle_batches(client_sock)
+            if request == 'W':
+                logging.info(f'el server recibe W')
+                self.__handle_lottery(client_sock)
 
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
