@@ -11,6 +11,28 @@ LOTTERY_WINNER_NUMBER = 7574
 def convertByteToNumber(byte: int) -> int:
     return (byte[0] << 24) | (byte[1] << 16) | (byte[2] << 8) | byte[3]
 
+def int_to_bytes(n, length=4):
+    """Convierte un entero en una secuencia de bytes de longitud fija (4 bytes)."""
+    return bytes([(n >> (8 * i)) & 0xFF for i in range(length - 1, -1, -1)])
+
+def send_message(sock, message):
+    encoded_message = message.encode('utf-8')  # Convertir el string a bytes
+    message_length = len(encoded_message)      # Obtener el tamaño
+    length_bytes = int_to_bytes(message_length)  # Convertir tamaño a 4 bytes
+    
+    sock.sendall(length_bytes + encoded_message)  # Enviar tamaño + mensaje
+
+def get_winners():
+    bets_saved = load_bets()
+    winners_by_agency = {} 
+    for bet in bets_saved:
+        if has_won(bet): 
+            if bet.agency not in winners_by_agency:
+                winners_by_agency[bet.agency] = []  
+            winners_by_agency[bet.agency].append(bet.document) 
+    
+    return winners_by_agency
+
 """ A lottery bet registry. """
 class Bet:
     def __init__(self, agency: str, first_name: str, last_name: str, document: str, birthdate: str, number: str):

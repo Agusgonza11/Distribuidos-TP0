@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"net"
 	"time"
+	"fmt"
 	"os"
 	"strings"
 	"os/signal"
@@ -108,6 +109,49 @@ func sendHeader(conn net.Conn, batch int, batchAmount int) {
 	}
 }
 
+func (c *Client) ShowResult(buf byte) {
+	var result string
+	switch buf {
+	case 0:
+		result = "success"
+	case 1:
+		result = "fail"
+	case 2:
+		result = "fail/success"
+	default:
+		log.Errorf("action: send_bet | result: fail | client_id: %v | error: unknown response %v",
+			c.config.ID, buf)
+		return
+	}
+	log.Infof("action: apuesta_enviada | result: %v ", result)
+}
+
+func (c *Client) receiveWinners() ([]string, error)  {
+	// Leer los primeros 4 bytes para obtener el tamaño
+	sizeBuf := make([]byte, 4)
+	_, err := io.ReadFull(c.conn, sizeBuf)
+	if err != nil {
+		return nil, fmt.Errorf("error leyendo tamaño del mensaje: %w", err)
+	}
+
+	var size uint32
+	buf := bytes.NewReader(sizeBuf)
+	if err := binary.Read(buf, binary.BigEndian, &size); err != nil {
+		return nil, fmt.Errorf("error convirtiendo tamaño: %w", err)
+	}
+
+	// Leer exactamente 'size' bytes del mensaje
+	messageBuf := make([]byte, size)
+	_, err = io.ReadFull(c.conn, messageBuf)
+	if err != nil {
+		return nil, fmt.Errorf("error leyendo mensaje completo: %w", err)
+	}
+
+	messageStr := string(messageBuf)
+	winners := strings.Split(messageStr, ";")
+	return winners, nil
+}
+
 func (c *Client) ManageBets(batches []string) {
 	// Envía apuestas en lotes al servidor y gestiona las respuestas.
 
@@ -123,30 +167,22 @@ func (c *Client) ManageBets(batches []string) {
 				c.config.ID, err)
 			return
 		}
-		
 		if n == 0 {
 			log.Errorf("action: send_bet | result: fail | client_id: %v | error: no data received",
 				c.config.ID)
 			return
 		}
-		
-		var result string
-		switch buf[0] {
-		case 0:
-			result = "success"
-		case 1:
-			result = "fail"
-		case 2:
-			result = "fail/success"
-		default:
-			log.Errorf("action: send_bet | result: fail | client_id: %v | error: unknown response %v",
-				c.config.ID, buf[0])
-			return
-		}
-
-		log.Infof("action: apuesta_enviada | result: %v ", result)
-
+		c.ShowResult(buf[0])
 	}
 	c.conn.Write([]byte{0, 0, 0, 0})
+	winners, error_winners := c.receiveWinners()
+	if error_winners != nil {
+		log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v",
+			c.config.ID, error_winners)		
+		return
+	}
+
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
+
 }
 

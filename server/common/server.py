@@ -2,7 +2,7 @@ import socket
 import logging
 import sys
 import signal
-from .utils import Bet, convertByteToNumber
+from .utils import Bet, convertByteToNumber, get_winners, has_won, send_message
 from .utils import store_bets
 
 
@@ -15,6 +15,8 @@ class Server:
         self.clients_sockets = []
         self.last_client_id = 0
         self.sockets_id = {}
+        self.winners = {}
+        self.agency_finish = {}
 
     def __handle_sigterm_signal(self, signal, frame):
         """
@@ -45,8 +47,18 @@ class Server:
             client_sock = self.__accept_new_connection()
             self.clients_sockets.append(client_sock)
             self.sockets_id[client_sock.getpeername()] = self.last_client_id
+            self.agency_finish[client_sock.getpeername()] = False
             self.last_client_id += 1
             self.__handle_client_connection(client_sock)
+
+    def __handle_lottery(self, client_sock):
+        self.agency_finish[client_sock.getpeername()] = True
+        while not all(self.agency_finish.values()):
+            pass
+        winners = get_winners()
+        logging.info(f'action: sorteo | result: success')
+        send_message(client_sock, ';'.join(winners[self.sockets_id[client_sock.getpeername()]]))
+
 
     def __handle_client_connection(self, client_sock):
         """
@@ -59,6 +71,7 @@ class Server:
             while True:
                 size = convertByteToNumber(client_sock.recv(4))
                 if size == 0:
+                    self.__handle_lottery(client_sock)
                     break
                 bets_length = convertByteToNumber(client_sock.recv(4))
                 msg = client_sock.recv(size).decode('utf-8')
@@ -83,6 +96,7 @@ class Server:
 
                 logging.info(f'action: apuesta_recibida | result: success | cantidad: {total_bets_received}')
                 store_bets(bets)
+            sasd = 2 
 
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")

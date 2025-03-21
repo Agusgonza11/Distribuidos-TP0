@@ -24,7 +24,6 @@ def generar_yaml(cantidad_clientes, clientes):
                 "volumes": [
                     "./server/config.ini:/config.ini"
                     "./bets.csv:/bets.csv"
-
                 ]
             }
         },
