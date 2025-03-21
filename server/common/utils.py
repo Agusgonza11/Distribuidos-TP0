@@ -8,6 +8,8 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 
+def convertByteToNumber(byte: int) -> int:
+    return (byte[0] << 24) | (byte[1] << 16) | (byte[2] << 8) | byte[3]
 
 """ A lottery bet registry. """
 class Bet:

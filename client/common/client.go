@@ -14,7 +14,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-var header int = 12
+var response int = 1
 var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
@@ -101,27 +101,48 @@ func sendHeader(conn net.Conn, batch int, batchAmount int) {
 	// Escribir los datos en orden
 	binary.Write(&buf, binary.BigEndian, batchSize)  // 4 bytes - tamaño del batch
 	binary.Write(&buf, binary.BigEndian, maxAmount)  // 4 bytes - cantidad máxima de apuestas por batch
+	// Escribir el buffer en la conexión
+	_, err := conn.Write(buf.Bytes())
+	if err != nil {
+		log.Errorf("Error al enviar el header: %v", err)
+	}
 }
 
 func (c *Client) ManageBets(batches []string) {
 	for _, batch := range batches {
 		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
 		io.WriteString(c.conn, batch)
+		log.Infof("batch enviado : %v ", batch)
 
-		buf := make([]byte, 1) // Buffer para un solo byte
-		_, err := c.conn.Read(buf)	
+		buf := make([]byte, response) // Buffer para un solo byte
+		n, err := c.conn.Read(buf)	
 		if err != nil {
 			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
 				c.config.ID, err)
 			return
 		}
+		
+		if n == 0 {
+			log.Errorf("action: send_bet | result: fail | client_id: %v | error: no data received",
+				c.config.ID)
+			return
+		}
+		
 		var result string
-		if buf[0] == 0 {
+		switch buf[0] {
+		case 0:
 			result = "success"
-		} else if buf[0] == 1 {
+		case 1:
 			result = "fail"
-		} 
-		log.Infof("action: apuesta_enviada | result: %v | batch: %v", result, batch)
+		case 2:
+			result = "fail/success"
+		default:
+			log.Errorf("action: send_bet | result: fail | client_id: %v | error: unknown response %v",
+				c.config.ID, buf[0])
+			return
+		}
+
+		log.Infof("action: apuesta_enviada | result: %v ", result)
 
 	}
 }
