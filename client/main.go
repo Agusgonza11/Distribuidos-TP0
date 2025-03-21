@@ -11,6 +11,8 @@ import (
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
+var fileName =  "./agency.csv"
+var maxBytes = 8192
 var log = logging.MustGetLogger("log")
 
 // InitConfig Function that uses viper library to parse configuration parameters.
@@ -36,8 +38,6 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
 	v.BindEnv("batch", "maxAmount")
-	v.BindEnv("batch", "fileName")
-	v.BindEnv("batch", "maxBytes")
 
 
 	// Try to read configuration from config file. If config file
@@ -113,7 +113,7 @@ func main() {
 		BatchMaxAmount:		v.GetInt("batch.maxAmount"),
 	}
 
-	batches, err_csv := common.ReadBetsFromCSV(v.GetString("batch.fileName"), v.GetInt("batch.maxAmount"), v.GetInt("batch.maxBytes"))
+	batches, err_csv := common.ReadBetsFromCSV(fileName, v.GetInt("batch.maxAmount"), maxBytes)
 	if err_csv != nil {
 		log.Fatalf("Error al leer el CSV: %v", err_csv)
 	}

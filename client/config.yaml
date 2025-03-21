@@ -8,5 +8,3 @@ log:
   level: "INFO"
 batch:
   maxAmount: 10
-  fileName: "./agency.csv"
-  maxBytes: 8192
