@@ -112,7 +112,6 @@ func (c *Client) ManageBets(batches []string) {
 	for _, batch := range batches {
 		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
 		io.WriteString(c.conn, batch)
-		log.Infof("batch enviado : %v ", batch)
 
 		buf := make([]byte, response) // Buffer para un solo byte
 		n, err := c.conn.Read(buf)	
@@ -143,8 +142,8 @@ func (c *Client) ManageBets(batches []string) {
 		}
 
 		log.Infof("action: apuesta_enviada | result: %v ", result)
-	}
-	c.conn.Write([]byte{0})
 
+	}
+	c.conn.Write([]byte{0, 0, 0, 0})
 }
 
