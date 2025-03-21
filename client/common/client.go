@@ -109,7 +109,10 @@ func sendHeader(conn net.Conn, batch int, batchAmount int) {
 }
 
 func (c *Client) ManageBets(batches []string) {
-	for _, batch := range batches {
+	for i, batch := range batches {
+		if i > 0 {
+			break
+		}
 		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
 		io.WriteString(c.conn, batch)
 
@@ -141,7 +144,7 @@ func (c *Client) ManageBets(batches []string) {
 			return
 		}
 
-		//log.Infof("action: apuesta_enviada | result: %v ", result)
+		log.Infof("action: apuesta_enviada | result: %v ", result)
 
 	}
 	c.conn.Write([]byte{0, 0, 0, 0})

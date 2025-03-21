@@ -88,6 +88,8 @@ class Server:
             client_sock.sendall(b'\x01')
         finally:
             client_sock.close()
+            self.clients_sockets.remove(client_sock)
+
 
     def __accept_new_connection(self):
         """
