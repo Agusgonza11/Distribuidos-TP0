@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 	"os"
+	"strings"
 	"os/signal"
 	"syscall"
 	"bytes"
@@ -90,9 +91,9 @@ func (c *Client) StartClientLoop(batches []string) {
 }
 
 
-func sendHeader(conn net.Conn, batch int, batchMaxAmount int) {
+func sendHeader(conn net.Conn, batch int, batchAmount int) {
 	batchSize := uint32(batch)
-	maxAmount := uint32(batchMaxAmount)
+	maxAmount := uint32(batchAmount)
 
 	// Crear un buffer para escribir todos los datos juntos
 	var buf bytes.Buffer
@@ -104,7 +105,7 @@ func sendHeader(conn net.Conn, batch int, batchMaxAmount int) {
 
 func (c *Client) ManageBets(batches []string) {
 	for _, batch := range batches {
-		sendHeader(c.conn, len(batch), c.config.BatchMaxAmount)
+		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
 		io.WriteString(c.conn, batch)
 
 		buf := make([]byte, 1) // Buffer para un solo byte
