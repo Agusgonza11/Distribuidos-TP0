@@ -1,10 +1,12 @@
-# id: 1
+id: 1
 server:
   address: "server:12345"
 loop:
-  amount: 5
+  amount: 1
   period: "5s"
 log:
   level: "INFO"
 batch:
   maxAmount: 10
+  fileName: "./agency.csv"
+  maxBytes: 8192

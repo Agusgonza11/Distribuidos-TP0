@@ -5,11 +5,9 @@ import (
 	"os"
 	"strings"
 	"time"
-
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
@@ -37,6 +35,10 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "maxAmount")
+	v.BindEnv("batch", "fileName")
+	v.BindEnv("batch", "maxBytes")
+
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -104,20 +106,17 @@ func main() {
 	PrintConfig(v)
 
 	clientConfig := common.ClientConfig{
-		ServerAddress: v.GetString("server.address"),
-		ID:            v.GetString("id"),
-		LoopAmount:    v.GetInt("loop.amount"),
-		LoopPeriod:    v.GetDuration("loop.period"),
+		ServerAddress: 		v.GetString("server.address"),
+		ID:            		v.GetString("id"),
+		LoopAmount:    		v.GetInt("loop.amount"),
+		LoopPeriod:    		v.GetDuration("loop.period"),
+		BatchMaxAmount:		v.GetInt("batch.maxAmount"),
 	}
 
-	clientBet := common.ClientBet{
-		Name:      os.Getenv("NOMBRE"),
-		Lastname:  os.Getenv("APELLIDO"),
-		DNI:       os.Getenv("DOCUMENTO"),
-		Birthdate: os.Getenv("NACIMIENTO"),
-		Number:    os.Getenv("NUMERO"),
+	batches, err_csv := common.ReadBetsFromCSV(v.GetString("batch.fileName"), v.GetInt("batch.maxAmount"), v.GetInt("batch.maxBytes"))
+	if err_csv != nil {
+		log.Fatalf("Error al leer el CSV: %v", err_csv)
 	}
-
-	client := common.NewClient(clientConfig, clientBet)
-	client.StartClientLoop()
+	client := common.NewClient(clientConfig)
+	client.StartClientLoop(batches)
 }
