@@ -90,6 +90,8 @@ func (c *Client) StartClientLoop(batches []string) {
 
 
 func sendHeader(conn net.Conn, batch int, batchAmount int) {
+	// Envía el encabezado con el tamaño del batch y la cantidad máxima de apuestas.
+
 	batchSize := uint32(batch)
 	maxAmount := uint32(batchAmount)
 
@@ -107,6 +109,8 @@ func sendHeader(conn net.Conn, batch int, batchAmount int) {
 }
 
 func (c *Client) ManageBets(batches []string) {
+	// Envía apuestas en lotes al servidor y gestiona las respuestas.
+
 	for _, batch := range batches {
 
 		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))

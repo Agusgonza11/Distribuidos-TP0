@@ -67,7 +67,7 @@ class Server:
                 bets = []
                 for actual_bet in msg.split(";"):
                     fields = actual_bet.split("|")
-                    if len(fields) == 5:  # Validar que tenga todos los campos
+                    if len(fields) == 5: 
                         bet = Bet(self.sockets_id[client_sock.getpeername()], fields[0], fields[1], fields[2], fields[3], fields[4])
                         bets.append(bet)
                     else:
