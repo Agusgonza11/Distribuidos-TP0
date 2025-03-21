@@ -56,32 +56,33 @@ class Server:
         client socket will also be closed
         """
         try:
-            size = convertByteToNumber(client_sock.recv(4))
-            bets_length = convertByteToNumber(client_sock.recv(4))
-            msg = client_sock.recv(size).decode('utf-8')
-            logging.info(f'se recibio las bets: {msg}')
-
-            isSuccess = True
-            bets = []
-            for actual_bet in msg.split(";"):
-                fields = actual_bet.split("|")
-                if len(fields) == 5:  # Validar que tenga todos los campos
-                    bet = Bet(self.sockets_id[client_sock.getpeername()], fields[0], fields[1], fields[2], fields[3], fields[4])
-                    bets.append(bet)
-                else:
+            while True:
+                size = convertByteToNumber(client_sock.recv(4))
+                if size == 0:
+                    break
+                bets_length = convertByteToNumber(client_sock.recv(4))
+                msg = client_sock.recv(size).decode('utf-8')
+                isSuccess = True
+                bets = []
+                for actual_bet in msg.split(";"):
+                    fields = actual_bet.split("|")
+                    if len(fields) == 5:  # Validar que tenga todos los campos
+                        bet = Bet(self.sockets_id[client_sock.getpeername()], fields[0], fields[1], fields[2], fields[3], fields[4])
+                        bets.append(bet)
+                    else:
+                        isSuccess = False
+                if len(bets) != bets_length:
                     isSuccess = False
-            if len(bets) != bets_length:
-                isSuccess = False
 
-            if not isSuccess:
-                client_sock.sendall(b'\x02')
-                logging.info(f'action: apuesta_recibida | result: fail | cantidad: {bets_length - len(bets)}')
-            else:
-                client_sock.sendall(b'\x00')
+                if not isSuccess:
+                    client_sock.sendall(b'\x02')
+                    logging.info(f'action: apuesta_recibida | result: fail | cantidad: {bets_length - len(bets)}')
+                else:
+                    client_sock.sendall(b'\x00')
 
-            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+                logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+                store_bets(bets)
 
-            store_bets(bets)
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
             client_sock.sendall(b'\x01')

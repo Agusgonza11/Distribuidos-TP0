@@ -143,7 +143,8 @@ func (c *Client) ManageBets(batches []string) {
 		}
 
 		log.Infof("action: apuesta_enviada | result: %v ", result)
-
 	}
+	c.conn.Write([]byte{0})
+
 }
 
