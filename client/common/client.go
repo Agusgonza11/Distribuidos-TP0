@@ -172,7 +172,7 @@ func (c *Client) ManageBets(batches []string) {
 				c.config.ID)
 			return
 		}
-		c.ShowResult(buf[0])
+		//c.ShowResult(buf[0])
 	}
 	c.conn.Write([]byte{0, 0, 0, 0})
 	winners, error_winners := c.receiveWinners()
