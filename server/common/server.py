@@ -9,13 +9,14 @@ from .utils import store_bets
 byte =  1
 
 class Server:
-    def __init__(self, port, listen_backlog):
+    def __init__(self, port, listen_backlog, expected_clients):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.clients_sockets = []
         self.last_client_id = 0
+        self.expected_clients = expected_clients
         self.sockets_id = {}
         self.winners = {}
         self.agency_finish = {}
@@ -51,12 +52,16 @@ class Server:
             self.__handle_client_connection(client_sock)
 
     def __handle_lottery(self, client_sock):
-        id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
-        #while not all(self.agency_finish.values()):
-        #    time.sleep(0.1)
-        winners = get_winners()
-        logging.info(f'action: sorteo | result: success')
-        send_message(client_sock, ';'.join(winners[self.sockets_id[id]]))
+        logging.info(f'asdasd {self.expected_clients}')
+        
+        if len(self.agency_finish) == int(self.expected_clients):
+            client_sock.sendall(b'S')  # Sending
+            id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
+            winners = get_winners()
+            logging.info(f'action: sorteo | result: success')
+            send_message(client_sock, ';'.join(winners[self.sockets_id[id]]))
+        else:
+            client_sock.sendall(b'R')  # Retry
 
 
 
