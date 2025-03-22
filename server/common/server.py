@@ -15,6 +15,7 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.clients_sockets = []
+        self.is_finish = False
         self.last_client_id = 0
         self.expected_clients = expected_clients
         self.sockets_id = {}
@@ -52,13 +53,13 @@ class Server:
             self.__handle_client_connection(client_sock)
 
     def __handle_lottery(self, client_sock):
-        logging.info(f'asdasd {self.expected_clients}')
-        
         if len(self.agency_finish) == int(self.expected_clients):
+            if not self.is_finish:
+                logging.info(f'action: sorteo | result: success')
+                self.is_finish = True
             client_sock.sendall(b'S')  # Sending
             id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
             winners = get_winners()
-            logging.info(f'action: sorteo | result: success')
             send_message(client_sock, ';'.join(winners[self.sockets_id[id]]))
         else:
             client_sock.sendall(b'R')  # Retry
