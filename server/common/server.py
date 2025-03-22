@@ -60,7 +60,9 @@ class Server:
             client_sock.sendall(b'S')  # Sending
             id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
             winners = get_winners()
-            send_message(client_sock, ';'.join(winners[self.sockets_id[id]]))
+            agency_id = self.sockets_id.get(id, None)
+            winners_list = winners.get(agency_id, [])
+            send_message(client_sock, ';'.join(winners_list))
         else:
             client_sock.sendall(b'R')  # Retry
 

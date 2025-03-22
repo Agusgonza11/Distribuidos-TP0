@@ -202,7 +202,12 @@ func (c *Client) receiveWinners() ([]string, error)  {
 	}
 
 	messageStr := string(messageBuf)
-	winners := strings.Split(messageStr, ";")
+	var winners []string
+	if messageStr == "" {
+		winners = []string{}
+	} else {
+		winners = strings.Split(messageStr, ";")
+	}
 	return winners, nil
 }
 
