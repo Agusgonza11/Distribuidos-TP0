@@ -132,43 +132,52 @@ func (c *Client) ShowResult(buf byte) {
 }
 
 func (c *Client) requestWinners() {
-	c.createClientSocket()
-	c.conn.Write([]byte{'W'})
-	log.Infof("el cliente esta enviando W")
+    for {
+        c.createClientSocket()
+        c.conn.Write([]byte{'W'})
+        log.Infof("El cliente está enviando W")
 
-	buffer := make([]byte, 1)
-	_, err := c.conn.Read(buffer)
-	if err != nil {
-		fmt.Println("Error al leer del socket:", err)
-		return
-	}
-	switch buffer[0] {
-	case 'R':
-		fmt.Println("Recibido: R - Retry")
-		c.conn.Close()
-		time.Sleep(c.config.LoopPeriod)
-		c.requestWinners()
+        buffer := make([]byte, 1)
+        _, err := c.conn.Read(buffer)
+        if err != nil {
+            log.Errorf("Error al leer del socket: %v", err)
+            c.conn.Close()
+            return
+        }
 
-	case 'S':
-		fmt.Println("Recibido: S - Sending")
+        switch buffer[0] {
+        case 'R':
+            log.Infof("Recibido: R - Retry")
+            c.conn.Close()
+            time.Sleep(c.config.LoopPeriod) // Esperar antes de volver a intentar
+            continue 
 
-		var buf bytes.Buffer
-		fixedID := make([]byte, 4)
-		copy(fixedID, c.config.ID)                    
-		buf.Write(fixedID)  
-		_, err := c.conn.Write(buf.Bytes())
-		if err != nil {
-			log.Errorf("Error al enviar el header: %v", err)
-		}
-		winners, error_winners := c.receiveWinners()
-		if error_winners != nil {
-			log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v",
-				c.config.ID, error_winners)		
-			return
-		}
-	
-		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
-	}
+        case 'S':
+            log.Infof("Recibido: S - Sending")
+            var buf bytes.Buffer
+            fixedID := make([]byte, 4)
+            copy(fixedID, c.config.ID)                    
+            buf.Write(fixedID)  
+            _, err := c.conn.Write(buf.Bytes())
+            if err != nil {
+                log.Errorf("Error al enviar el header: %v", err)
+                c.conn.Close()
+                return
+            }
+
+            winners, error_winners := c.receiveWinners()
+            if error_winners != nil {
+                log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v",
+                    c.config.ID, error_winners)        
+                c.conn.Close()
+                return
+            }
+        
+            log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
+            c.conn.Close()
+            return 
+        }
+    }
 }
 
 func (c *Client) receiveWinners() ([]string, error)  {
