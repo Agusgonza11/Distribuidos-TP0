@@ -14,6 +14,7 @@ locks = {
     "save_bets": multiprocessing.Lock(),
 }
 
+
 class Server:
     def __init__(self, port, listen_backlog, expected_clients):
         # Initialize server socket
@@ -21,14 +22,14 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
         self.clients_sockets = []
-        self.is_finish = False
         self.last_client_id = 0
         self.expected_clients = expected_clients
         self.sockets_id = {}
         self.winners = {}
-        self.agency_finish = []
         self.clients_processes = [] 
         self.locks = locks
+        manager = multiprocessing.Manager()
+        self.shared_data = manager.dict({"is_finish":  False, "agency_finish" : manager.list()})
 
 
     def __handle_sigterm_signal(self, signal, frame):
@@ -77,10 +78,10 @@ class Server:
         Sends the winners list if all agencies have finished, otherwise sends retry signal.
         """
         with locks["agency_finish"]:
-            if len(self.agency_finish) == int(self.expected_clients):
-                if not self.is_finish:
+            if len(self.shared_data["agency_finish"]) == int(self.expected_clients):
+                if not self.shared_data["is_finish"]:
                     logging.info(f'action: sorteo | result: success')
-                    self.is_finish = True
+                    self.shared_data["is_finish"] = True
                 client_sock.sendall(b'S')  # Sending
                 id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
                 with locks["get_winners"]:
@@ -102,8 +103,7 @@ class Server:
             size = convertByteToNumber(client_sock.recv(4))
             if size == 0:
                 with locks["agency_finish"]:
-                    self.agency_finish.append(client_sock.getpeername())
-                    logging.info(f'los que terminaron son {self.agency_finish}')
+                    self.shared_data["agency_finish"].append(client_sock.getpeername())
                 break
             bets_length = convertByteToNumber(client_sock.recv(4))
             id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
