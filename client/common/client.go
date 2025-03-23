@@ -200,8 +200,9 @@ func (c *Client) ManageBets(batches []string) {
 			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
-		c.ShowResult(buf[0])
+		//c.ShowResult(buf[0])
 	}
 	c.conn.Write([]byte{0, 0, 0, 0})
+	log.Infof("El cliente termino de enviar las bets")
 	c.conn.Close()
 }
