@@ -1,8 +1,7 @@
 package common
 
-
 import (
-	"io"	
+	"io"
 	"encoding/binary"
 	"net"
 	"time"
@@ -18,59 +17,46 @@ import (
 var response int = 1
 var log = logging.MustGetLogger("log")
 
-// ClientConfig Configuration used by the client
+// ClientConfig almacena la configuración utilizada por el cliente.
 type ClientConfig struct {
-	ID            	string
-	ServerAddress 	string
-	LoopAmount   	int
-	LoopPeriod    	time.Duration
-	BatchMaxAmount	int
+	ID            string   
+	ServerAddress string   
+	LoopAmount    int       
+	LoopPeriod    time.Duration 
+	BatchMaxAmount int        
 }
 
-type ClientBet struct {
-	Name      string
-	Lastname  string
-	DNI       string
-	Birthdate string
-	Number    string
-}
-
-// Client Entity that encapsulates how
+// Client representa una entidad cliente que interactúa con el servidor.
 type Client struct {
-	config 		ClientConfig
-	conn   		net.Conn
+	config ClientConfig // Configuración del cliente
+	conn   net.Conn    // Conexión con el servidor
 }
 
-// NewClient Initializes a new client receiving the configuration
-// as a parameter
+// NewClient inicializa un nuevo cliente con la configuración dada.
 func NewClient(config ClientConfig) *Client {
-	client := &Client{
-		config: config,
-	}
-	return client
+	return &Client{config: config}
 }
 
-// CreateClientSocket Initializes client socket. In case of
-// failure, error is printed in stdout/stderr and exit 1
-// is returned
+// createClientSocket inicializa un socket para conectarse al servidor.
+// Si falla, registra el error y devuelve nil.
 func (c *Client) createClientSocket() error {
 	conn, err := net.Dial("tcp", c.config.ServerAddress)
 	if err != nil {
 		log.Criticalf(
 			"action: connect | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
+			c.config.ID, err,
 		)
+		return err
 	}
 	c.conn = conn
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
+// StartClientLoop maneja la conexión del cliente con el servidor.
+// Se encarga de enviar apuestas y solicitar ganadores.
 func (c *Client) StartClientLoop(batches []string) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
-
 	go func() {
 		<-sigs
 		log.Infof("Client %v: Received SIGTERM. Closing connection", c.config.ID)
@@ -80,40 +66,33 @@ func (c *Client) StartClientLoop(batches []string) {
 		os.Exit(0)
 	}()
 
-
-	// Create the connection the server in every loop iteration. Send an
 	c.createClientSocket()
 	c.ManageBets(batches)
 	c.requestWinners()
 	time.Sleep(c.config.LoopPeriod)
-	
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
-
+// sendHeader envía un encabezado con información sobre el batch al servidor.
 func sendHeader(conn net.Conn, batch int, batchAmount int, id string) {
-	// Envía el encabezado con el tamaño del batch y la cantidad máxima de apuestas.
-
 	batchSize := uint32(batch)
 	maxAmount := uint32(batchAmount)
 
-	// Crear un buffer para escribir todos los datos juntos
 	var buf bytes.Buffer
+	binary.Write(&buf, binary.BigEndian, batchSize)
+	binary.Write(&buf, binary.BigEndian, maxAmount)
 
-	// Escribir los datos en orden
-	binary.Write(&buf, binary.BigEndian, batchSize)  // 4 bytes - tamaño del batch
-	binary.Write(&buf, binary.BigEndian, maxAmount)  // 4 bytes - cantidad máxima de apuestas por batch
-    fixedID := make([]byte, 4)           			 // 4 bytes - id
-    copy(fixedID, id)                    
+	fixedID := make([]byte, 4)
+	copy(fixedID, id)
+	buf.Write(fixedID)
 
-    buf.Write(fixedID)  
-	// Escribir el buffer en la conexión
 	_, err := conn.Write(buf.Bytes())
 	if err != nil {
 		log.Errorf("Error al enviar el header: %v", err)
 	}
 }
 
+// ShowResult muestra el resultado de la transacción basada en la respuesta del servidor.
 func (c *Client) ShowResult(buf byte) {
 	var result string
 	switch buf {
@@ -122,66 +101,65 @@ func (c *Client) ShowResult(buf byte) {
 	case 1:
 		result = "fail"
 	case 2:
-		result = "fail/success"
+		result = "partial success"
 	default:
-		log.Errorf("action: send_bet | result: fail | client_id: %v | error: unknown response %v",
-			c.config.ID, buf)
+		log.Errorf("action: send_bet | result: fail | client_id: %v | error: unknown response %v", c.config.ID, buf)
 		return
 	}
-	log.Infof("action: apuesta_enviada | result: %v ", result)
+	log.Infof("action: apuestas_enviadas | result: %v", result)
 }
 
+// requestWinners solicita los ganadores al servidor.
 func (c *Client) requestWinners() {
-    for {
-        c.createClientSocket()
-        c.conn.Write([]byte{'W'})
-        log.Infof("El cliente está enviando W")
+	for {
+		c.createClientSocket()
+		c.conn.Write([]byte{'W'})
+		log.Infof("El cliente está solicitando Winners")
 
-        buffer := make([]byte, 1)
-        _, err := c.conn.Read(buffer)
-        if err != nil {
-            log.Errorf("Error al leer del socket: %v", err)
-            c.conn.Close()
-            return
-        }
+		buffer := make([]byte, 1)
+		_, err := c.conn.Read(buffer)
+		if err != nil {
+			log.Errorf("Error al leer del socket: %v", err)
+			c.conn.Close()
+			return
+		}
 
-        switch buffer[0] {
-        case 'R':
-            log.Infof("Recibido: R - Retry")
-            c.conn.Close()
-            time.Sleep(c.config.LoopPeriod) // Esperar antes de volver a intentar
-            continue 
+		switch buffer[0] {
+		case 'R':
+			log.Infof("No finalizó el sorteo, volver a intentar")
+			c.conn.Close()
+			time.Sleep(c.config.LoopPeriod)
+			continue
 
-        case 'S':
-            log.Infof("Recibido: S - Sending")
-            var buf bytes.Buffer
-            fixedID := make([]byte, 4)
-            copy(fixedID, c.config.ID)                    
-            buf.Write(fixedID)  
-            _, err := c.conn.Write(buf.Bytes())
-            if err != nil {
-                log.Errorf("Error al enviar el header: %v", err)
-                c.conn.Close()
-                return
-            }
+		case 'S':
+			log.Infof("El sorteo ha finalizado")
+			var buf bytes.Buffer
+			fixedID := make([]byte, 4)
+			copy(fixedID, c.config.ID)
+			buf.Write(fixedID)
+			_, err := c.conn.Write(buf.Bytes())
+			if err != nil {
+				log.Errorf("Error al enviar el header: %v", err)
+				c.conn.Close()
+				return
+			}
 
-            winners, error_winners := c.receiveWinners()
-            if error_winners != nil {
-                log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v",
-                    c.config.ID, error_winners)        
-                c.conn.Close()
-                return
-            }
-        
-            log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
-            c.conn.Close()
-            return 
-        }
-    }
+			winners, err := c.receiveWinners()
+			if err != nil {
+				log.Errorf("action: receive_winners | result: fail | client_id: %v | error: %v", c.config.ID, err)
+				c.conn.Close()
+				return
+			}
+
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(winners))
+			c.conn.Close()
+			return
+		}
+	}
 }
 
-func (c *Client) receiveWinners() ([]string, error)  {
-	// Leer los primeros 4 bytes para obtener el tamaño
+// receiveWinners recibe los ganadores del servidor.
+func (c *Client) receiveWinners() ([]string, error) {
 	sizeBuf := make([]byte, 4)
 	_, err := io.ReadFull(c.conn, sizeBuf)
 	if err != nil {
@@ -194,7 +172,6 @@ func (c *Client) receiveWinners() ([]string, error)  {
 		return nil, fmt.Errorf("error convirtiendo tamaño: %w", err)
 	}
 
-	// Leer exactamente 'size' bytes del mensaje
 	messageBuf := make([]byte, size)
 	_, err = io.ReadFull(c.conn, messageBuf)
 	if err != nil {
@@ -202,40 +179,29 @@ func (c *Client) receiveWinners() ([]string, error)  {
 	}
 
 	messageStr := string(messageBuf)
-	var winners []string
 	if messageStr == "" {
-		winners = []string{}
-	} else {
-		winners = strings.Split(messageStr, ";")
+		return []string{}, nil
 	}
-	return winners, nil
+	return strings.Split(messageStr, ";"), nil
 }
 
+// ManageBets maneja el envío de apuestas al servidor.
 func (c *Client) ManageBets(batches []string) {
-	// Envía apuestas en lotes al servidor y gestiona las respuestas.
 	c.conn.Write([]byte{'B'})
-	log.Infof("el cliente esta enviando B")
+	log.Infof("El cliente está enviando Bets")
 
 	for _, batch := range batches {
-
 		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")), c.config.ID)
 		io.WriteString(c.conn, batch)
 
-		buf := make([]byte, response) // Buffer para un solo byte
-		n, err := c.conn.Read(buf)	
-		if err != nil {
-			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
-				c.config.ID, err)
+		buf := make([]byte, response)
+		n, err := c.conn.Read(buf)
+		if err != nil || n == 0 {
+			log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return
 		}
-		if n == 0 {
-			log.Errorf("action: send_bet | result: fail | client_id: %v | error: no data received",
-				c.config.ID)
-			return
-		}
-		//c.ShowResult(buf[0])
+		c.ShowResult(buf[0])
 	}
 	c.conn.Write([]byte{0, 0, 0, 0})
 	c.conn.Close()
 }
-

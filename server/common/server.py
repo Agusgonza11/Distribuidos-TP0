@@ -53,6 +53,10 @@ class Server:
             self.__handle_client_connection(client_sock)
 
     def __handle_lottery(self, client_sock):
+        """
+        Handles the lottery request from the client.
+        Sends the winners list if all agencies have finished, otherwise sends retry signal.
+        """
         if len(self.agency_finish) == int(self.expected_clients):
             if not self.is_finish:
                 logging.info(f'action: sorteo | result: success')
@@ -69,6 +73,10 @@ class Server:
 
 
     def __handle_batches(self, client_sock):
+        """
+        Handles batch processing of bets from a client.
+        Stores received bets and sends appropriate responses.
+        """
         self.agency_finish[client_sock.getpeername()] = False
         while True:
             size = convertByteToNumber(client_sock.recv(4))
@@ -114,11 +122,11 @@ class Server:
         try:
             request = client_sock.recv(byte).decode('utf-8')
             if request == 'B':
-                logging.info(f'el server recibe B')
+                logging.info(f'el server recibe Bets')
 
                 self.__handle_batches(client_sock)
             if request == 'W':
-                logging.info(f'el server recibe W')
+                logging.info(f'el server recibe solicitud de Winners')
                 self.__handle_lottery(client_sock)
 
         except OSError as e:

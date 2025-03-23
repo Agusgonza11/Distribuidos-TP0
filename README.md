@@ -355,3 +355,89 @@ Se podra observar:
 ```sh
 action: apuesta_recibida | result: success | cantidad: ${CANTIDAD_DE_APUESTAS}
 ```
+
+## Ejercicio 7
+
+#### Cliente
+
+- Ahora, una vez que los clientes envían sus **batches**, solicitan a los ganadores al servidor.
+- Se mantiene el formato del archivo CSV para la carga de apuestas.
+- Se agregó lógica para solicitar ganadores en caso de que el sorteo haya finalizado o reintentar si aún no ha ocurrido.
+
+#### Servidor
+
+- Se introdujo un diccionario `sockets_id` donde, para cada ID de cliente recibido, se asigna un **ID incremental** para vincularlo a una agencia. Esto se debe a que los IDs de agencia se asignan por orden de llegada, por lo que, por ejemplo, `client5` podría tener `id: 0`.
+- Ahora el servidor conoce cuántos clientes debe esperar gracias al archivo de configuración (`config.yaml`).
+- Cada cliente, al finalizar el envío de apuestas, informa al servidor con un **byte de finalización**. El servidor mantiene un registro (`agency_finish`) de qué clientes ya terminaron.
+- Una vez que todos los clientes han informado su finalización, el servidor marca el sorteo como **finalizado** y lo reporta en los logs:
+  ```sh
+  action: sorteo | result: success
+  ```
+- Cuando un cliente solicita los ganadores, el servidor utiliza la función `get_winners()`, que internamente llama a `load_bets()` y `has_won()` para obtener los ganadores por agencia.
+
+---
+
+### Protocolo de comunicación
+
+#### Envío de apuestas (`B` - Bets)
+
+1. **El cliente envía un byte con el carácter `'B'`** indicando que enviará apuestas por **batches**.
+2. **El servidor recibe los datos en el siguiente orden:**
+   - `4 bytes (uint32)`: tamaño del mensaje.
+   - `4 bytes (uint32)`: cantidad de apuestas en el batch.
+   - `4 bytes (uint32)`: ID del cliente (se reintrodujo porque ahora los clientes abren y cierran conexiones, no era conveniente seguir vinculando los ids de agencias a los peer names).
+   - **Batch de apuestas**: un string donde las apuestas están separadas por `;` y los campos dentro de cada apuesta por `|`.
+3. **El servidor procesa los datos:**
+   - Separa las apuestas y las almacena en una lista.
+   - Valida que la cantidad de apuestas recibidas coincida con `bets_length`.
+   - Si hay diferencias, lo registra en los logs.
+4. **El servidor responde con un byte:**
+   - `0x00`: si las apuestas se procesaron correctamente.
+   - `0x01`: si ocurrió un error.
+   - `0x02`: si algunas apuestas fueron incorrectas.
+5. **El cliente recibe la respuesta y la registra en los logs.**
+6. **Finalización:**
+   - Una vez que el cliente ha enviado todos sus **batches**, envía un `uint32` con valor `0`.
+   - El servidor interpreta esto como una señal de finalización y cierra la conexión con el cliente.
+
+#### Solicitud de ganadores (`W` - Winners)
+
+1. **El cliente envía un byte con el carácter `'W'`** indicando que solicita los ganadores del sorteo.
+2. **El servidor puede responder de dos maneras:**
+   - **Si el sorteo aún no ha finalizado:**
+     - Envía un byte `'R'` (**Retry**) indicando que el cliente debe volver a intentarlo más tarde.
+     - Ambos cierran la conexión.
+     - El cliente espera un tiempo (`LoopPeriod` del archivo de configuración) y reintenta la solicitud.
+   - **Si el sorteo ha finalizado:**
+     - El servidor envía un byte `'S'` (**Sending**) indicando que enviará los datos.
+     - Luego, obtiene los ganadores para la agencia correspondiente al cliente.
+     - Envía los **DNI de los ganadores** como un string separados por `;`.
+     - El cliente separa la información y reporta la cantidad de ganadores en los logs.
+     - Ambos cierran la conexión.
+
+---
+
+### Ejecución
+
+Generar el archivo `docker-compose-dev.yaml` con el archivo de configuración de clientes:
+```sh
+./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+```
+
+Levantar los contenedores:
+```sh
+make docker-compose-up
+```
+
+Observar los logs en otra terminal:
+```sh
+make docker-compose-logs
+```
+
+Se podrá observar:
+```sh
+action: sorteo | result: success
+```
+```sh
+action: consulta_ganadores | result: success | cant_ganadores: ${CANT}
+```
