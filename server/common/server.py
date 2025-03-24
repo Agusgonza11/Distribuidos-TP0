@@ -85,8 +85,10 @@ class Server:
                     agency_id = self.shared_data["clients_id"][client_sock.getpeername()[0]]
                     winners_list = winners.get(agency_id, [])
                     send_message(client_sock, ';'.join(winners_list))
+                return True
             else:
                 client_sock.sendall(b'R')  # Retry
+                return False
 
 
 
@@ -145,19 +147,22 @@ class Server:
         """
         agency_id = self.new_client(client_sock, locks)
         try:
-            request = client_sock.recv(byte).decode('utf-8')
-            if request == 'B':
-                logging.info(f'el server recibe Bets')
-                self.__handle_batches(client_sock, locks, agency_id)
-            if request == 'W':
-                logging.info(f'el server recibe solicitud de Winners')
-                self.__handle_lottery(client_sock, locks)
-                client_sock.close()
-                self.clients_sockets.remove(client_sock)
+            while True:
+                request = client_sock.recv(byte).decode('utf-8')
+                if request == 'B':
+                    logging.info(f'el server recibe Bets')
+                    self.__handle_batches(client_sock, locks, agency_id)
+                if request == 'W':
+                    logging.info(f'el server recibe solicitud de Winners')
+                    if self.__handle_lottery(client_sock, locks):
+                        break
         except OSError as e:
             logging.error("action: receive_message | result: fail | error: {e}")
             client_sock.sendall(b'\x01')
-
+        finally:
+            logging.info(f'Cerrando conexión con el cliente {agency_id}')
+            client_sock.close()
+            self.clients_sockets.remove(client_sock)
 
     def __accept_new_connection(self):
         """

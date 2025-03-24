@@ -94,7 +94,6 @@ func (c *Client) ShowResult(buf byte) {
 // requestWinners solicita los ganadores al servidor.
 func (c *Client) requestWinners() {
 	for {
-		c.createClientSocket()
 		c.conn.Write([]byte{'W'})
 		log.Infof("El cliente está solicitando Winners")
 
@@ -109,7 +108,6 @@ func (c *Client) requestWinners() {
 		switch buffer[0] {
 		case 'R':
 			log.Infof("No finalizó el sorteo, volver a intentar")
-			c.conn.Close()
 			time.Sleep(c.config.LoopPeriod)
 			continue
 
@@ -193,5 +191,4 @@ func (c *Client) ManageBets(batches []string) {
 	}
 	log.Infof("El cliente termino de enviar las bets")
 	c.conn.Write([]byte{0, 0, 0, 0})
-	c.conn.Close()
 }
