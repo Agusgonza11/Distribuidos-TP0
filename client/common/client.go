@@ -115,16 +115,6 @@ func (c *Client) requestWinners() {
 
 		case 'S':
 			log.Infof("El sorteo ha finalizado")
-			var buf bytes.Buffer
-			fixedID := make([]byte, 4)
-			copy(fixedID, c.config.ID)
-			buf.Write(fixedID)
-			_, err := c.conn.Write(buf.Bytes())
-			if err != nil {
-				log.Errorf("Error al enviar el header: %v", err)
-				c.conn.Close()
-				return
-			}
 
 			winners, err := c.receiveWinners()
 			if err != nil {

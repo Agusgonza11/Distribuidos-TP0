@@ -10,13 +10,9 @@ from .utils import store_bets
 byte =  1
 locks = {
     "get_winners": multiprocessing.Lock(),
-    "agency_finish": multiprocessing.Lock(),
+    "clients_agency": multiprocessing.Lock(),
     "save_bets": multiprocessing.Lock(),
 }
-AGENCY_ID = 0
-FINISH = 1
-
-# agency_finish = {client peername = (agency_id, is_finish), ...}
 
 class Server:
     def __init__(self, port, listen_backlog, expected_clients):
@@ -26,11 +22,12 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.clients_sockets = []
         self.expected_clients = expected_clients
+        self.last_client_id = 0
         self.winners = {}
         self.clients_processes = [] 
         self.locks = locks
         manager = multiprocessing.Manager()
-        self.shared_data = manager.dict({"is_finish":  False, "agency_finish" : manager.dict(), "last_client_id": 0})
+        self.shared_data = manager.dict({"is_finish":  False, "agency_finish" : manager.list(), "clients_ids": manager.dict()})
 
 
     def __handle_sigterm_signal(self, signal, frame):
@@ -79,15 +76,14 @@ class Server:
         Sends the winners list if all agencies have finished, otherwise sends retry signal.
         """
         with locks["agency_finish"]:
-            if len(self.shared_data["agency_finish"]) == int(self.expected_clients) and all(is_finish for _, is_finish in self.shared_data["agency_finish"]):
+            if len(self.shared_data["agency_finish"]) == int(self.expected_clients):
                 if not self.shared_data["is_finish"]:
                     logging.info(f'action: sorteo | result: success')
                     self.shared_data["is_finish"] = True
                 client_sock.sendall(b'S')  # Sending
-                id = client_sock.recv(4).decode('utf-8').rstrip('\x00')
                 with locks["get_winners"]:
                     winners = get_winners()
-                    agency_id = self.shared_data["agency_finish"][client_sock.getpeername()[0]][AGENCY_ID]
+                    agency_id = self.shared_data["clients_id"][client_sock.getpeername()[0]]
                     winners_list = winners.get(agency_id, [])
                     send_message(client_sock, ';'.join(winners_list))
             else:
@@ -95,7 +91,7 @@ class Server:
 
 
 
-    def __handle_batches(self, client_sock, locks):
+    def __handle_batches(self, client_sock, locks, agency_id):
         """
         Handles batch processing of bets from a client.
         Stores received bets and sends appropriate responses.
@@ -103,9 +99,8 @@ class Server:
         while True:
             size = convertByteToNumber(client_sock.recv(4))
             if size == 0:
-                with locks["agency_finish"]:
-                    logging.info(f'lo que tengo en este lock es: {self.shared_data["agency_finish"]}')
-                    self.shared_data["agency_finish"][client_sock.getpeername()[0]][FINISH] = True
+                with locks["clients_agency"]:
+                    self.shared_data["agency_finish"].append(self.shared_data["clients_id"])
                     break
             bets_length = convertByteToNumber(client_sock.recv(4))
             msg = client_sock.recv(size).decode('utf-8')
@@ -115,7 +110,7 @@ class Server:
             for actual_bet in msg.split(";"):
                 fields = actual_bet.split("|")
                 if len(fields) == 5: 
-                    bet = Bet(self.shared_data["agency_finish"][client_sock.getpeername()[0]][AGENCY_ID], fields[0], fields[1], fields[2], fields[3], fields[4])
+                    bet = Bet(agency_id, fields[0], fields[1], fields[2], fields[3], fields[4])
                     bets.append(bet)
                 else:
                     isSuccess = False
@@ -133,12 +128,14 @@ class Server:
                 store_bets(bets)       
 
     def new_client(self, client_sock, locks):
-        with locks["agency_finish"]:
+        agency_id = 0
+        with locks["clients_agency"]:
             peername = client_sock.getpeername()[0]
-            if peername not in self.shared_data["agency_finish"]:
-                self.shared_data["agency_finish"][peername] = [self.shared_data["last_client_id"], False]
+            if peername not in self.shared_data["clients_id"]:
+                agency_id = self.last_client_id
+                self.shared_data["clients_agency"][peername] = agency_id
             self.shared_data["last_client_id"] += 1
-
+        return agency_id
 
     def __handle_client_connection(self, client_sock, locks):
         """
@@ -147,12 +144,12 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        self.new_client(client_sock, locks)
+        agency_id = self.new_client(client_sock, locks)
         try:
             request = client_sock.recv(byte).decode('utf-8')
             if request == 'B':
                 logging.info(f'el server recibe Bets')
-                self.__handle_batches(client_sock, locks)
+                self.__handle_batches(client_sock, locks, agency_id)
             if request == 'W':
                 logging.info(f'el server recibe solicitud de Winners')
                 self.__handle_lottery(client_sock, locks)
