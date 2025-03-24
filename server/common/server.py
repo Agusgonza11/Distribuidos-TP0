@@ -22,12 +22,11 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.clients_sockets = []
         self.expected_clients = expected_clients
-        self.last_client_id = 0
         self.winners = {}
         self.clients_processes = [] 
         self.locks = locks
         manager = multiprocessing.Manager()
-        self.shared_data = manager.dict({"is_finish":  False, "agency_finish" : manager.list(), "clients_ids": manager.dict()})
+        self.shared_data = manager.dict({"is_finish":  False, "agency_finish" : manager.list(), "clients_id": manager.dict(), "last_client_id": 0})
 
 
     def __handle_sigterm_signal(self, signal, frame):
@@ -75,7 +74,7 @@ class Server:
         Handles the lottery request from the client.
         Sends the winners list if all agencies have finished, otherwise sends retry signal.
         """
-        with locks["agency_finish"]:
+        with locks["clients_agency"]:
             if len(self.shared_data["agency_finish"]) == int(self.expected_clients):
                 if not self.shared_data["is_finish"]:
                     logging.info(f'action: sorteo | result: success')
@@ -132,8 +131,8 @@ class Server:
         with locks["clients_agency"]:
             peername = client_sock.getpeername()[0]
             if peername not in self.shared_data["clients_id"]:
-                agency_id = self.last_client_id
-                self.shared_data["clients_agency"][peername] = agency_id
+                agency_id = self.shared_data["last_client_id"]
+                self.shared_data["clients_id"][peername] = agency_id
             self.shared_data["last_client_id"] += 1
         return agency_id
 
