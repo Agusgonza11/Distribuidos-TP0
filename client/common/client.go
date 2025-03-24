@@ -73,24 +73,6 @@ func (c *Client) StartClientLoop(batches []string) {
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
 
-// sendHeader envía un encabezado con información sobre el batch al servidor.
-func sendHeader(conn net.Conn, batch int, batchAmount int, id string) {
-	batchSize := uint32(batch)
-	maxAmount := uint32(batchAmount)
-
-	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, batchSize)
-	binary.Write(&buf, binary.BigEndian, maxAmount)
-
-	fixedID := make([]byte, 4)
-	copy(fixedID, id)
-	buf.Write(fixedID)
-
-	_, err := conn.Write(buf.Bytes())
-	if err != nil {
-		log.Errorf("Error al enviar el header: %v", err)
-	}
-}
 
 // ShowResult muestra el resultado de la transacción basada en la respuesta del servidor.
 func (c *Client) ShowResult(buf byte) {
@@ -185,13 +167,30 @@ func (c *Client) receiveWinners() ([]string, error) {
 	return strings.Split(messageStr, ";"), nil
 }
 
+// sendHeader envía un encabezado con información sobre el batch al servidor.
+func sendHeader(conn net.Conn, batch int, batchAmount int) {
+	batchSize := uint32(batch)
+	maxAmount := uint32(batchAmount)
+
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.BigEndian, batchSize)
+	binary.Write(&buf, binary.BigEndian, maxAmount)
+
+	_, err := conn.Write(buf.Bytes())
+	if err != nil {
+		log.Errorf("Error al enviar el header: %v", err)
+	}
+}
+
 // ManageBets maneja el envío de apuestas al servidor.
 func (c *Client) ManageBets(batches []string) {
 	c.conn.Write([]byte{'B'})
 	log.Infof("El cliente está enviando Bets")
 
 	for _, batch := range batches {
-		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")), c.config.ID)
+		// log.Infof("El cliente esta enviando la %v batch de %v", i, len(batches))
+
+		sendHeader(c.conn, len(batch), len(strings.Split(batch, ";")))
 		io.WriteString(c.conn, batch)
 
 		buf := make([]byte, response)
@@ -202,7 +201,7 @@ func (c *Client) ManageBets(batches []string) {
 		}
 		//c.ShowResult(buf[0])
 	}
-	c.conn.Write([]byte{0, 0, 0, 0})
 	log.Infof("El cliente termino de enviar las bets")
+	c.conn.Write([]byte{0, 0, 0, 0})
 	c.conn.Close()
 }

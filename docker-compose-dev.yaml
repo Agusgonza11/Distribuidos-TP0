@@ -56,3 +56,4 @@ services:
     - testing_net
     volumes:
     - ./server/config.ini:/config.ini
+    - ./bets.csv:/bets.csv
