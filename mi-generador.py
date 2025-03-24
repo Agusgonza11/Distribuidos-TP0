@@ -23,7 +23,7 @@ def generar_yaml(cantidad_clientes, clientes):
                 "networks": ["testing_net"],
                 "volumes": [
                     "./server/config.ini:/config.ini"
-                    "./bets.csv:/bets.csv"
+                    # "./bets.csv:/bets.csv" Descomentar para debuggear
                 ]
             }
         },
