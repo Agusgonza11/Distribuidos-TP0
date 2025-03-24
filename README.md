@@ -410,6 +410,7 @@ action: apuesta_recibida | result: success | cantidad: ${CANTIDAD_DE_APUESTAS}
      - El cliente espera un tiempo (`LoopPeriod` del archivo de configuración) y reintenta la solicitud.
    - **Si el sorteo ha finalizado:**
      - El servidor envía un byte `'S'` (**Sending**) indicando que enviará los datos.
+     - El cliente le envia al servidor su id para que identifique que agencia le solicita sus ganadores.  
      - Luego, obtiene los ganadores para la agencia correspondiente al cliente.
      - Envía los **DNI de los ganadores** como un string separados por `;`.
      - El cliente separa la información y reporta la cantidad de ganadores en los logs.
