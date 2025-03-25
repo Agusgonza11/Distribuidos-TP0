@@ -276,7 +276,7 @@ Se modificó el script `my-generador.py` para que estos datos sean utilizados y 
 1. **El cliente envía un `uint32`** con el tamaño del mensaje.
 2. **El cliente envía el mensaje**, que es un string con el siguiente formato:
    ```
-   nombre|apellido|dni|nacimiento|numero
+   id|nombre|apellido|dni|nacimiento|numero
    ```
 3. **El servidor recibe el `uint32`**, lo interpreta como el tamaño del mensaje.
 4. **El servidor recibe el mensaje**, lo parsea y lo almacena utilizando `store_bets`.
@@ -329,6 +329,9 @@ action: apuesta_almacenada | result: success | dni: ${DNI} | numero: ${NUMERO}
 1. **El cliente envía un ****`uint32`**** (size)** indicando el tamaño del batch.
 2. **El cliente envía un ****`uint32`**** (bets\_length)** con la cantidad de apuestas en el batch.
 3. **El cliente envía el batch como un string**, con las apuestas separadas por `;` y los campos de cada apuesta separados por `|`.
+   ```
+   nombre|apellido|dni|nacimiento|numero
+   ```
 4. **El servidor recibe los datos y los procesa**:
    - Separa las apuestas y las almacena en una lista.
    - Valida que la cantidad de apuestas recibidas coincida con `bets_length`.
@@ -454,8 +457,6 @@ action: consulta_ganadores | result: success | cant_ganadores: ${CANT}
 
 ## Ejercicio 8
 
-### Introducción
-
 En esta versión, se ha introducido la concurrencia para mejorar la eficiencia y el manejo de conexiones. Ahora, cada vez que un cliente se conecta, se lanza un proceso en paralelo para gestionar su comunicación con el servidor. Estos procesos se almacenan y se cierran junto a los sockets cuando el servidor recibe una señal `SIGTERM`.
 
 Se han implementado tres instancias de exclusión mutua (`Lock`) para garantizar el acceso seguro a los recursos compartidos:
@@ -476,6 +477,9 @@ Otro cambio fundamental es que los clientes ahora mantienen una única conexión
    - `4 bytes (uint32)`: tamaño del mensaje.
    - `4 bytes (uint32)`: cantidad de apuestas en el batch.
    - **Batch de apuestas**: un string donde las apuestas están separadas por `;` y los campos dentro de cada apuesta por `|`.
+   ```
+   nombre|apellido|dni|nacimiento|numero
+   ```
 3. **El servidor procesa los datos:**
    - Separa las apuestas y las almacena en una lista.
    - Valida que la cantidad de apuestas recibidas coincida con `bets_length`.
