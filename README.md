@@ -182,11 +182,19 @@ La corrección personal tendrá en cuenta la calidad del código entregado y cas
 
 # Explicación de Resolución
 
+### Instalación de dependencias
+
+Se recomienda instalar `pyyaml` para manejar la generación del archivo `docker-compose-dev.yaml` desde el script Bash:
+
+```bash
+python3 -m pip install pyyaml
+```
+
 ## Ejercicio 1
 
 Para resolver este ejercicio, se utilizó el mismo script de Bash (`generar-compose.sh`) sugerido en la consigna, el cual invoca un script en Python (`mi-generador.py`).
 
-En `mi-generador.py`, se emplea la librería `yaml` para generar dinámicamente un archivo `docker-compose-dev.yaml`. Para lograr esto, se creo un diccionario en Python que replica la estructura original del `docker-compose.yaml`, modificando solo la cantidad de clientes de acuerdo con el parametro recibido. Esto garantiza una generación de YAML estructurada y sin errores de indentación.
+En `mi-generador.py`, se emplea la librería `yaml` para generar dinámicamente un archivo `docker-compose-dev.yaml`. Para lograr esto, se creo un diccionario en Python que replica la estructura original del `docker-compose-dev.yaml`, modificando solo la cantidad de clientes de acuerdo con el parametro recibido. Esto garantiza una generación de YAML estructurada y sin errores de indentación.
 
 ### Ejecución
 El script se ejecuta con el siguiente comando:
