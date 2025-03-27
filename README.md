@@ -286,9 +286,9 @@ Se modificó el script `my-generador.py` para que estos datos sean utilizados y 
 6. **El cliente recibe el byte de respuesta** e imprime en los logs si la apuesta fue `success` o `fail`.
 
 ### Ejecución
-Generar el archivo `docker-compose-dev.yaml` ahora con el agregado del archivo `clientes.yaml`:
+Generar el archivo `docker-compose-dev.yaml`:
    ```sh
-   ./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+   ./generar-compose.sh docker-compose-dev.yaml 5
    ```
 Levantar los contenedores:
    ```sh
