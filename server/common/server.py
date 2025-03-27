@@ -4,10 +4,11 @@ import sys
 import signal
 import time
 import multiprocessing
-from .utils import Bet, convertByteToNumber, get_winners, has_won, send_message
+from .utils import Bet, convertByteToNumber, get_winners, has_won, recv_exact, send_message
 from .utils import store_bets
 
-byte =  1
+BYTE =  1
+BYTES = 4
 locks = {
     "get_winners": multiprocessing.Lock(),
     "clients_agency": multiprocessing.Lock(),
@@ -98,13 +99,13 @@ class Server:
         Stores received bets and sends appropriate responses.
         """
         while True:
-            size = convertByteToNumber(client_sock.recv(4))
+            size = convertByteToNumber(recv_exact(client_sock, BYTES))
             if size == 0:
                 with locks["clients_agency"]:
                     self.shared_data["agency_finish"].append(self.shared_data["clients_id"])
                     break
-            bets_length = convertByteToNumber(client_sock.recv(4))
-            msg = client_sock.recv(size).decode('utf-8')
+            bets_length = convertByteToNumber(recv_exact(client_sock, BYTES))
+            msg = recv_exact(client_sock, size).decode('utf-8')
             isSuccess = True
             total_bets_received = 0
             bets = []
@@ -124,7 +125,7 @@ class Server:
             else:
                 client_sock.sendall(b'\x00')
 
-            # logging.info(f'action: apuesta_recibida | result: success | cantidad: {total_bets_received}')
+            logging.info(f'action: apuesta_recibida | result: success | cantidad: {total_bets_received}')
             with locks["save_bets"]:
                 store_bets(bets)       
 
@@ -148,7 +149,8 @@ class Server:
         agency_id = self.new_client(client_sock, locks)
         try:
             while True:
-                request = client_sock.recv(byte).decode('utf-8')
+                
+                request = recv_exact(client_sock, BYTE).decode('utf-8')
                 if request == 'B':
                     logging.info(f'el server recibe Bets')
                     self.__handle_batches(client_sock, locks, agency_id)

@@ -442,3 +442,82 @@ action: sorteo | result: success
 ```sh
 action: consulta_ganadores | result: success | cant_ganadores: ${CANT}
 ```
+
+
+## Ejercicio 8
+
+### Introducción
+
+En esta versión, se ha introducido la concurrencia para mejorar la eficiencia y el manejo de conexiones. Ahora, cada vez que un cliente se conecta, se lanza un proceso en paralelo para gestionar su comunicación con el servidor. Estos procesos se almacenan y se cierran junto a los sockets cuando el servidor recibe una señal `SIGTERM`.
+
+Se han implementado tres instancias de exclusión mutua (`Lock`) para garantizar el acceso seguro a los recursos compartidos:
+1. **`get_winners`**: Asegura un acceso seguro al archivo CSV de apuestas cuando se consultan los ganadores.
+2. **`save_bets`**: Protege la escritura en el archivo CSV cuando se almacenan nuevas apuestas.
+3. **`clients_agency`**: Administra la asignación de IDs de clientes de manera segura.
+
+Otro cambio fundamental es que los clientes ahora mantienen una única conexión abierta durante toda la ejecución. Esto optimiza el uso de memoria y simplifica la gestión de conexiones, ya que los clientes no necesitan cerrar y reabrir sockets para solicitar los ganadores. En consecuencia, los IDs de los clientes vuelven a ser administrados exclusivamente por el servidor, vinculándolos con su `peer name`.
+
+---
+
+### Protocolo de comunicación - Version definitiva
+
+#### Envío de apuestas (`B` - Bets)
+
+1. **El cliente envía un byte con el carácter `'B'`** indicando que enviará apuestas por **batches**.
+2. **El servidor recibe los datos en el siguiente orden:**
+   - `4 bytes (uint32)`: tamaño del mensaje.
+   - `4 bytes (uint32)`: cantidad de apuestas en el batch.
+   - **Batch de apuestas**: un string donde las apuestas están separadas por `;` y los campos dentro de cada apuesta por `|`.
+3. **El servidor procesa los datos:**
+   - Separa las apuestas y las almacena en una lista.
+   - Valida que la cantidad de apuestas recibidas coincida con `bets_length`.
+   - Si hay diferencias, lo registra en los logs.
+4. **El servidor responde con un byte:**
+   - `0x00`: si las apuestas se procesaron correctamente.
+   - `0x01`: si ocurrió un error.
+   - `0x02`: si algunas apuestas fueron incorrectas.
+5. **El cliente recibe la respuesta y la registra en los logs.**
+6. **Finalización:**
+   - El cliente envía un byte con valor `0` en el tamaño del mensaje, lo que indica el fin del envío de apuestas.
+
+#### Solicitud de ganadores (`W` - Winners)
+
+1. **El cliente envía un byte con el carácter `'W'`** indicando que solicita los ganadores del sorteo.
+2. **El servidor puede responder de dos maneras:**
+   - **Si el sorteo aún no ha finalizado:**
+     - Envía un byte `'R'` (**Retry**) indicando que el cliente debe volver a intentarlo más tarde.
+     - El cliente espera un tiempo (`LoopPeriod` del archivo de configuración) y reintenta la solicitud.
+   - **Si el sorteo ha finalizado:**
+     - El servidor envía un byte `'S'` (**Sending**) indicando que enviará los datos.
+     - El servidor obtiene los ganadores para la agencia correspondiente al cliente.
+     - Envía los **DNI de los ganadores** como un string separados por `;`.
+     - El cliente separa la información y reporta la cantidad de ganadores en los logs.
+     - Ambos cierran la conexión.
+
+---
+
+### Ejecución
+
+Generar el archivo `docker-compose-dev.yaml` con el archivo de configuración de clientes:
+```sh
+./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+```
+
+Levantar los contenedores:
+```sh
+make docker-compose-up
+```
+
+Observar los logs en otra terminal:
+```sh
+make docker-compose-logs
+```
+
+Se podrá observar:
+```sh
+action: sorteo | result: success
+```
+```sh
+action: consulta_ganadores | result: success | cant_ganadores: ${CANT}
+```
+

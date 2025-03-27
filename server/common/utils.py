@@ -8,6 +8,19 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 
+def recv_exact(sock, n):
+    """
+    Funcion creada para evitar el short read
+    """
+    data = b""
+    while len(data) < n:
+        chunk = sock.recv(n - len(data))
+        if not chunk:
+            raise ConnectionError("Conexión cerrada inesperadamente")
+        data += chunk
+    return data
+
+
 def convertByteToNumber(byte: int) -> int:
     return (byte[0] << 24) | (byte[1] << 16) | (byte[2] << 8) | byte[3]
 
