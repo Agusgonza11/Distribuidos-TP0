@@ -349,9 +349,8 @@ action: apuesta_almacenada | result: success | dni: ${DNI} | numero: ${NUMERO}
 - El servidor interpreta este valor como un indicador de finalización y cierra la conexión con el cliente.
 
 ### Ejecución
-Generar el archivo `docker-compose-dev.yaml` ahora con el agregado del archivo `clientes.yaml`:
    ```sh
-   ./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+   ./generar-compose.sh docker-compose-dev.yaml {cantidad clientez}
    ```
 Levantar los contenedores:
    ```sh
@@ -433,7 +432,7 @@ action: apuesta_recibida | result: success | cantidad: ${CANTIDAD_DE_APUESTAS}
 
 Generar el archivo `docker-compose-dev.yaml` con el archivo de configuración de clientes:
 ```sh
-./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+./generar-compose.sh docker-compose-dev.yaml 5
 ```
 
 Levantar los contenedores:
@@ -512,7 +511,7 @@ Otro cambio fundamental es que los clientes ahora mantienen una única conexión
 
 Generar el archivo `docker-compose-dev.yaml` con el archivo de configuración de clientes:
 ```sh
-./generar-compose.sh docker-compose-dev.yaml 5 clientes.yaml
+./generar-compose.sh docker-compose-dev.yaml 5
 ```
 
 Levantar los contenedores:
